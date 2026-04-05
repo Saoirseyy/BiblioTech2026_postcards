@@ -1,16 +1,16 @@
 """
-02_metadata_color_classification.py
+02_metadata_colour_classification.py
 =====================================
-Use metadata color labels as ground truth to:
+Use metadata colour labels as ground truth to:
   1. Directly label images that have metadata
-  2. Train a Random Forest classifier on color features
+  2. Train a Random Forest classifier on colour features
   3. Predict labels for images without metadata
   4. Optionally combine with CLIP embeddings if available
  
-Color categories (consolidated):
+Colour categories (consolidated):
   bw    — Black-and-white, Grey
   sepia — Sepia, Brown
-  color — Color only
+  colour — Colour only
   (Blue, Green, Red, Purple, Pink → NaN, predicted by classifier)
 """
 import os
@@ -33,7 +33,7 @@ import seaborn as sns
 # SETTINGS
 # =============================================================
 METADATA_CSV = "01_data/00_metadata/20230301-Postcards.csv"
-COLOR_CSV = "01_data/01_processed/postcard_color_features_v2.csv"
+COLOUR_CSV = "01_data/01_processed/postcard_colour_features_v2.csv"
 OUTPUT_DIR    = "01_data/01_processed"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -76,31 +76,31 @@ print(f"Metadata shape: {meta.shape}")
 # Extract IE id from Resolver URL
 meta["IE_id"] = meta["Resolver URL 856$u"].str.extract(r"/(IE\d+)/")
  
-# Consolidate color labels into 3 categories
-COLOR_MAP = {
+# Consolidate colour labels into 3 categories
+COLOUR_MAP = {
     "Black-and-white": "bw",
     "Grey":            "bw",
     "Sepia":           "sepia",
     "Brown":           "sepia",
-    "Color":          "color",
+    "Colour":          "colour",
     
 }
-meta["color_label"] = meta["Color 340$o_standardized"].map(COLOR_MAP)
+meta["colour_label"] = meta["Colour 340$o_standardized"].map(COLOUR_MAP)
  
-print("\nConsolidated color distribution:")
-print(meta["color_label"].value_counts())
-print(f"Unmapped: {meta['color_label'].isna().sum()}")
+print("\nConsolidated colour distribution:")
+print(meta["colour_label"].value_counts())
+print(f"Unmapped: {meta['colour_label'].isna().sum()}")
  
  
 # =============================================================
-# STEP 2 — Load color features, keep front side only
+# STEP 2 — Load colour features, keep front side only
 # =============================================================
-print("\nLoading color features...")
-df_color = pd.read_csv(COLOR_CSV)
-df_color["side_flag"] = df_color["file_name"].str.extract(
+print("\nLoading colour features...")
+df_colour = pd.read_csv(COLOUR_CSV)
+df_color["side_flag"] = df_colour["file_name"].str.extract(
     r"_(R|V)(?=[._])", expand=False
 )
-df_front = df_color[df_color["side_flag"] == "R"].copy()
+df_front = df_colour[df_colour["side_flag"] == "R"].copy()
 print(f"Front-side images: {len(df_front)}")
  
 # Extract IE id from image path
@@ -109,30 +109,30 @@ print(f"IE id extracted: {df_front['IE_id'].notna().sum()} / {len(df_front)}")
  
  
 # =============================================================
-# STEP 3 — Join metadata color labels onto image features
+# STEP 3 — Join metadata colour labels onto image features
 # =============================================================
-meta_slim = meta[["IE_id", "color_label",
-                   "Color 340$o_standardized",
+meta_slim = meta[["IE_id", "colour_label",
+                   "Colour 340$o_standardized",
                    "Date 264$c_estimate",
                    "Date 264$c_estimateDecade"]].copy()
  
 df = df_front.merge(meta_slim, on="IE_id", how="left")
 print(f"\nAfter join:")
 print(f"  Total images      : {len(df)}")
-print(f"  With label        : {df['color_label'].notna().sum()}")
-print(f"  Without label     : {df['color_label'].isna().sum()}")
+print(f"  With label        : {df['colour_label'].notna().sum()}")
+print(f"  Without label     : {df['colour_label'].isna().sum()}")
 print("\nLabel distribution (matched images):")
-print(df["color_label"].value_counts())
+print(df["colour_label"].value_counts())
  
  
 # =============================================================
 # STEP 4 — Prepare features
 # =============================================================
 FEATURES = [
-    # Core color signals
+    # Core colour signals
     "saturated_pixel_ratio",
     "chromatic_pixel_ratio",
-    "colorfulness_v2",
+    "colourfulness_v2",
     "s_p50",
     "s_p95",
     # Hue diversity
@@ -143,7 +143,7 @@ FEATURES = [
     "sepia_pixel_ratio",
     "yb_mean",
     "rg_mean",
-    # Dominant color saturation
+    # Dominant colour saturation
     "dom1_saturation",
     "dom2_saturation",
 ]
@@ -161,9 +161,9 @@ scaler   = RobustScaler()
 X_all    = scaler.fit_transform(df_clean[FEATURES].values)
  
 # Split into labelled and unlabelled
-labelled_mask   = df_clean["color_label"].notna()
+labelled_mask   = df_clean["colour_label"].notna()
 X_labelled      = X_all[labelled_mask]
-y_labelled      = df_clean.loc[labelled_mask, "color_label"].values
+y_labelled      = df_clean.loc[labelled_mask, "colour_label"].values
 X_unlabelled    = X_all[~labelled_mask]
  
 print(f"\nLabelled   : {len(X_labelled)}")
@@ -203,7 +203,7 @@ print(importance_df.head(8).to_string(index=False))
 # Plot feature importance
 fig, ax = plt.subplots(figsize=(8, 5))
 ax.barh(importance_df["feature"][::-1],
-        importance_df["importance"][::-1], color="steelblue")
+        importance_df["importance"][::-1], colour="steelblue")
 ax.set_xlabel("Importance")
 ax.set_title("Random Forest — Feature Importance")
 plt.tight_layout()
@@ -216,15 +216,15 @@ plt.show()
 y_pred_labelled = clf.predict(X_labelled)
 print("\nClassification report (labelled data):")
 print(classification_report(y_labelled, y_pred_labelled,
-                             target_names=["bw", "color", "sepia"]))
+                             target_names=["bw", "colour", "sepia"]))
  
 # Confusion matrix
 cm = confusion_matrix(y_labelled, y_pred_labelled,
-                      labels=["bw", "sepia", "color"])
+                      labels=["bw", "sepia", "colour"])
 fig, ax = plt.subplots(figsize=(5, 4))
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-            xticklabels=["bw", "sepia", "color"],
-            yticklabels=["bw", "sepia", "color"], ax=ax)
+            xticklabels=["bw", "sepia", "colour"],
+            yticklabels=["bw", "sepia", "colour"], ax=ax)
 ax.set_xlabel("Predicted"); ax.set_ylabel("True")
 ax.set_title("Confusion matrix (labelled data)")
 plt.tight_layout()
@@ -237,7 +237,7 @@ plt.show()
 print("\nPredicting labels for unlabelled images...")
  
 # Assign labels: use metadata label if available, else predict
-df_clean["predicted_label"] = df_clean["color_label"].copy()
+df_clean["predicted_label"] = df_clean["colour_label"].copy()
 df_clean["label_source"]    = "metadata"
  
 if len(X_unlabelled) > 0:
@@ -256,7 +256,7 @@ print(df_clean.groupby(["label_source", "predicted_label"]).size())
  
  
 # =============================================================
-# STEP 8 — Visualise: PCA colored by label
+# STEP 8 — Visualise: PCA coloured by label
 # =============================================================
 from sklearn.decomposition import PCA
  
@@ -264,7 +264,7 @@ pca  = PCA(n_components=2, random_state=42)
 X_2d = pca.fit_transform(X_all)
 ev   = pca.explained_variance_ratio_
  
-color_map = {"bw": "gray", "sepia": "peru", "color": "steelblue"}
+colour_map = {"bw": "gray", "sepia": "peru", "colour": "steelblue"}
 fig, axes = plt.subplots(1, 2, figsize=(13, 5))
  
 for ax, source in zip(axes, ["metadata", "all"]):
@@ -277,16 +277,16 @@ for ax, source in zip(axes, ["metadata", "all"]):
         labels = df_clean["predicted_label"].values
         title  = "All images (metadata + predicted)"
  
-    for lbl, col in color_map.items():
+    for lbl, col in colour_map.items():
         m = labels == lbl
         ax.scatter(X_2d[mask][m, 0], X_2d[mask][m, 1],
-                   s=4, alpha=0.4, color=col, label=lbl)
+                   s=4, alpha=0.4, colour=col, label=lbl)
     ax.set_title(title)
     ax.legend(fontsize=8, markerscale=2)
     ax.set_xlabel(f"PC1 ({ev[0]:.1%})")
     ax.set_ylabel(f"PC2 ({ev[1]:.1%})")
  
-plt.suptitle("PCA colored by color label", fontsize=12)
+plt.suptitle("PCA coloured by colour label", fontsize=12)
 plt.tight_layout()
 plt.show()
  
@@ -305,7 +305,7 @@ show_label_samples(
     title_prefix="[Final] "
 )
 show_label_samples(
-    df_clean[df_clean["predicted_label"] == "color"],
+    df_clean[df_clean["predicted_label"] == "colour"],
     label_col="predicted_label", path_col="image_path", n=9,
     title_prefix="[Final] "
 )
@@ -316,13 +316,13 @@ show_label_samples(
 # =============================================================
 out_cols = (
     ["image_id", "file_name", "image_path", "IE_id",
-     "color_label", "predicted_label", "label_source", "label_confidence",
-     "Color 340$o_standardized", "Date 264$c_estimate", "Date 264$c_estimateDecade"]
+     "colour_label", "predicted_label", "label_source", "label_confidence",
+     "Colour 340$o_standardized", "Date 264$c_estimate", "Date 264$c_estimateDecade"]
     + FEATURES
 )
 out_cols = [c for c in out_cols if c in df_clean.columns]
  
-out_path = os.path.join(OUTPUT_DIR, "postcard_color_labels_final.csv")
+out_path = os.path.join(OUTPUT_DIR, "postcard_colour_labels_final.csv")
 df_clean[out_cols].to_csv(out_path, index=False)
 print(f"\nSaved to: {out_path}")
 print(f"Total rows: {len(df_clean)}")
