@@ -32,14 +32,14 @@ Metadata is used as guidance rather than ground truth, clustering is used to dis
 |----------|------------|
 | `bw` | Black-and-white |
 | `sepia` | Sepia / warm brown tones |
-| `color_photo` | Real colour photograph |
-| `color_handcolored` | Hand-coloured image |
-| `monotone_blue` | Blue monotone print |
+| `monotone_blue` | Blue monotone print |  
+| `monotone_red` | Red monotone print |  
 | `monotone_green` | Green monotone print |
 | `monotone_purple` | Purple monotone print |
-| `monotone_red` | Red monotone print |  
+| `color_handcolored` | Hand-coloured image |  
+| `color_photo` | Real colour photograph |
 
-![Final categories overview](assets/category.jpeg)
+![Final categories overview](04_result/category.png)
 
 
 ## Pipeline
