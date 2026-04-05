@@ -129,8 +129,9 @@ Post-processing rules:
 
 ## Limitations
 
-- Some paintings are classified as photographs  
-- Colour features alone cannot fully capture semantic image types  
+- The pipeline achieves strong classification results within 10 days, but remains imperfect.  
+- Some oil paintings are classified as photographs.  
+- Colour features alone cannot fully capture semantic image types, such as distinguishing between photographic and illustrated content.  
 
 
 ## Next Step
