@@ -9,18 +9,18 @@ from scipy.stats import entropy as scipy_entropy
 # SETTINGS
 # =========================================================
 DATA_ROOT  = "<path_to_postcard_images>"
-OUTPUT_CSV = "01_data/01_processed/postcard_color_features_v2.csv"
+OUTPUT_CSV = "01_data/01_processed/postcard_colour_features_v2.csv"
 
 VALID_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp")
 RESIZE_TO    = (80, 80)
-TOP_K_COLORS = 3
+TOP_K_COLOURS = 3
 QUANT_LEVEL  = 16
 
 # ---- Thresholds ----
 SAT_THRESHOLD       = 25   # s > 25 → pixel is considered saturated (OpenCV range 0–255)
 SAT_HIGH_THRESHOLD  = 80   # s > 80 → highly saturated pixel
 SAT_LOW_THRESHOLD   = 15   # s < 15 → low saturation / near grayscale pixel
-CHROMA_THRESHOLD    = 20   # max(R,G,B)-min(R,G,B) > 20 → pixel has noticeable color difference
+CHROMA_THRESHOLD    = 20   # max(R,G,B)-min(R,G,B) > 20 → pixel has noticeable colour difference
 HUE_BINS            = 18   # hue histogram bins (each ≈20 degrees)
 HUE_BINS_FINE       = 36   # finer hue histogram (each ≈5 degrees, used for diversity)
 
@@ -44,24 +44,24 @@ def get_image_id(path):
     return os.path.splitext(os.path.basename(path))[0]
 
 
-def quantized_dominant_colors(rgb_img, top_k=3, levels=16):
+def quantized_dominant_colours(rgb_img, top_k=3, levels=16):
     pixels = rgb_img.reshape(-1, 3)
     q = (pixels // levels).astype(np.int32)
     unique_bins, counts = np.unique(q, axis=0, return_counts=True)
     sorted_idx = np.argsort(counts)[::-1][:top_k]
     top_bins = unique_bins[sorted_idx]
-    colors = []
+    colours = []
     for b in top_bins:
-        color = (b * levels + levels // 2).clip(0, 255)
-        colors.append(color.astype(int))
-    while len(colors) < top_k:
-        colors.append(np.array([0, 0, 0]))
-    return colors
+        colour = (b * levels + levels // 2).clip(0, 255)
+        colours.append(colour.astype(int))
+    while len(colours) < top_k:
+        colours.append(np.array([0, 0, 0]))
+    return colours
 
 
 def single_rgb_to_hsv_sat(r_val, g_val, b_val):
     arr = np.array([[[int(r_val), int(g_val), int(b_val)]]], dtype=np.uint8)
-    hsv = cv2.cvtColor(arr, cv2.COLOR_RGB2HSV)
+    hsv = cv2.cvtcolour(arr, cv2.colour_RGB2HSV)
     return float(hsv[0, 0, 1]) / 255.0
 
 
@@ -73,10 +73,10 @@ def compute_features(image_path):
     if img_bgr is None:
         return None
 
-    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    img_rgb = cv2.cvtcolour(img_bgr, cv2.colour_BGR2RGB)
     img_rgb = cv2.resize(img_rgb, RESIZE_TO, interpolation=cv2.INTER_AREA)
-    img_hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
-    gray    = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY).astype(np.float32)
+    img_hsv = cv2.cvtcolour(img_rgb, cv2.colour_RGB2HSV)
+    gray    = cv2.cvtcolour(img_rgb, cv2.colour_RGB2GRAY).astype(np.float32)
 
     r = img_rgb[:, :, 0].astype(np.float32)
     g = img_rgb[:, :, 1].astype(np.float32)
@@ -101,7 +101,7 @@ def compute_features(image_path):
         np.abs(r - g) + np.abs(r - b) + np.abs(g - b)
     ) / 255.0
 
-    # rough sepia indicator: if R is larger than B the color tends to be warm
+    # rough sepia indicator: if R is larger than B the colour tends to be warm
     sepia_score = np.mean((r - b) / (r + g + b + 1.0))
 
     # ratio of warm / cool pixels (OpenCV hue range 0–179)
@@ -110,15 +110,15 @@ def compute_features(image_path):
     warm_ratio = warm_mask.mean()
     cool_ratio = cool_mask.mean()
 
-    dom_colors = quantized_dominant_colors(img_rgb, top_k=TOP_K_COLORS, levels=QUANT_LEVEL)
+    dom_colours = quantized_dominant_colours(img_rgb, top_k=TOP_K_colourS, levels=QUANT_LEVEL)
 
     # =========================================================
     # BLOCK 2 — Saturation distribution
     #
     # black-and-white: almost all pixels have s ≈ 0
     # sepia: low saturation but not zero, distribution concentrated at low values
-    # colorized postcards: low-sat background + some high-sat colored regions → bimodal
-    # real color photos: saturation more evenly distributed and generally higher
+    # colourized postcards: low-sat background + some high-sat coloured regions → bimodal
+    # real colour photos: saturation more evenly distributed and generally higher
     # =========================================================
     saturated_pixel_ratio = (s > SAT_THRESHOLD).mean()
 
@@ -127,7 +127,7 @@ def compute_features(image_path):
     s_p90 = float(np.percentile(s, 90))
     s_p95 = float(np.percentile(s, 95))
 
-    # bimodal gap: colorized postcards tend to have high p90 (colored areas)
+    # bimodal gap: colourized postcards tend to have high p90 (coloured areas)
     # but low p10 (gray background), so the gap becomes large
     s_bimodal_gap = s_p90 - s_p10
 
@@ -135,15 +135,15 @@ def compute_features(image_path):
     highly_saturated_ratio = (s > SAT_HIGH_THRESHOLD).mean()
     low_sat_ratio          = (s < SAT_LOW_THRESHOLD).mean()
 
-    #  bimodal ratio: usually small for colorized postcards
-    # (large gray background + small colored areas)
+    #  bimodal ratio: usually small for colourized postcards
+    # (large gray background + small coloured areas)
     bimodal_ratio = highly_saturated_ratio / (low_sat_ratio + 1e-6)
 
     # =========================================================
-    # BLOCK 3 — Pixel color difference (channel range)
+    # BLOCK 3 — Pixel colour difference (channel range)
     # black-and-white: RGB channels are almost equal → range ≈ 0
     # sepia: R > B, so range slightly larger
-    # color photos: range clearly larger
+    # colour photos: range clearly larger
     # =========================================================
     pixel_stack   = np.stack([r, g, b], axis=-1)
     channel_range = pixel_stack.max(axis=-1) - pixel_stack.min(axis=-1)
@@ -167,13 +167,13 @@ def compute_features(image_path):
     # BLOCK 5 — Hue diversity (only using saturated pixels)
     #
     # hue_entropy：randomness of hue distribution
-    #   high for real color photos, low for BW / sepia / colorized
+    #   high for real colour photos, low for BW / sepia / colourized
     #
     # hue_unique_count：number of hue bins with >1% pixels
-    #   colorized postcards: usually 3–6 ; real color photos: can reach 15–30
+    #   colourized postcards: usually 3–6 ; real colour photos: can reach 15–30
     #
     # hue_dominance：proportion of the most common hue bin
-    #   colorized / sepia: colors concentrated → high ; real color photos: colors spread → low
+    #   colourized / sepia: colours concentrated → high ; real colour photos: colours spread → low
     # =========================================================
     sat_mask = s > SAT_THRESHOLD
 
@@ -204,14 +204,14 @@ def compute_features(image_path):
         hue_unique_count = 0
 
     # =========================================================
-    # BLOCK 6 — Opponent color channels (Hasler & Süsstrunk 2003)
+    # BLOCK 6 — Opponent colour channels (Hasler & Süsstrunk 2003)
     #
     # rg = R - G（red-green opponent）
     # yb = 0.5*(R+G) - B（yellow-blue opponent）
     #
     # black-and-white：rg_mean ≈ 0, yb_mean ≈ 0, std , both std are small
     # sepia：yb_mean > 0（warmer tone），rg_mean slightly positive，low std
-    # real color photos: larger std, mean can be positive or negative
+    # real colour photos: larger std, mean can be positive or negative
     # =========================================================
     rg = r - g
     yb = 0.5 * (r + g) - b
@@ -221,17 +221,17 @@ def compute_features(image_path):
     rg_std  = float(rg.std())
     yb_std  = float(yb.std())
 
-    # improved colorfulness metric
-    colorfulness_v2 = (
+    # improved colourfulness metric
+    colourfulness_v2 = (
         np.sqrt(rg_std**2 + yb_std**2) +
         0.3 * np.sqrt(rg_mean**2 + yb_mean**2)
     )
 
     # =========================================================
-    # BLOCK 7 — Saturation of dominant colors
+    # BLOCK 7 — Saturation of dominant colours
     # =========================================================
-    dom1_sat = single_rgb_to_hsv_sat(dom_colors[0][0], dom_colors[0][1], dom_colors[0][2])
-    dom2_sat = single_rgb_to_hsv_sat(dom_colors[1][0], dom_colors[1][1], dom_colors[1][2])
+    dom1_sat = single_rgb_to_hsv_sat(dom_colours[0][0], dom_colours[0][1], dom_colours[0][2])
+    dom2_sat = single_rgb_to_hsv_sat(dom_colours[1][0], dom_colours[1][1], dom_colours[1][2])
 
     # =========================================================
     # RETURN
@@ -254,18 +254,18 @@ def compute_features(image_path):
         "cool_ratio":      cool_ratio,
 
         # --- BLOCK 2: Saturation distribution ---
-        "saturated_pixel_ratio":   saturated_pixel_ratio,   # ★ black-and-white vs color
+        "saturated_pixel_ratio":   saturated_pixel_ratio,   # ★ black-and-white vs colour
         "s_p10":                   s_p10,
         "s_p50":                   s_p50,
         "s_p90":                   s_p90,
         "s_p95":                   s_p95,
-        "s_bimodal_gap":           s_bimodal_gap,            # ★ detect colorized postcards
-        "highly_saturated_ratio":  highly_saturated_ratio,   # ★ detect colorized postcards
-        "low_sat_ratio":           low_sat_ratio,            # ★ colorized postcards / black-and-white
-        "bimodal_ratio":           bimodal_ratio,            # ★ detect colorized postcards
+        "s_bimodal_gap":           s_bimodal_gap,            # ★ detect colourized postcards
+        "highly_saturated_ratio":  highly_saturated_ratio,   # ★ detect colourized postcards
+        "low_sat_ratio":           low_sat_ratio,            # ★ colourized postcards / black-and-white
+        "bimodal_ratio":           bimodal_ratio,            # ★ detect colourized postcards
 
-        # --- BLOCK 3: Pixel color difference ---
-        "chromatic_pixel_ratio": chromatic_pixel_ratio,     # ★ black-and-white vs color
+        # --- BLOCK 3: Pixel colour difference ---
+        "chromatic_pixel_ratio": chromatic_pixel_ratio,     # ★ black-and-white vs colour
         "channel_range_mean":    channel_range_mean,
         "channel_range_p95":     channel_range_p95,
 
@@ -273,29 +273,29 @@ def compute_features(image_path):
         "sepia_pixel_ratio": sepia_pixel_ratio,             # ★ detect sepia postcards
 
         # --- BLOCK 5: Hue diversity ---
-        "hue_entropy":      hue_entropy,                    # ★ color vs others
-        "hue_unique_count": hue_unique_count,               # ★ detect colorized postcards
-        "hue_dominance":    hue_dominance,                  # ★ colorized postcards / sepia
+        "hue_entropy":      hue_entropy,                    # ★ colour vs others
+        "hue_unique_count": hue_unique_count,               # ★ detect colourized postcards
+        "hue_dominance":    hue_dominance,                  # ★ colourized postcards / sepia
 
-        # --- BLOCK 6: Opponent color channels ---
+        # --- BLOCK 6: Opponent colour channels ---
         "rg_mean": rg_mean, "yb_mean": yb_mean,
         "rg_std":  rg_std,  "yb_std":  yb_std,
-        "colorfulness_v2": colorfulness_v2,                 # ★ overall color strength
+        "colourfulness_v2": colourfulness_v2,                 # ★ overall colour strength
 
-        # --- BLOCK 7: Dominant colors ---
-        "dom1_r": int(dom_colors[0][0]),
-        "dom1_g": int(dom_colors[0][1]),
-        "dom1_b": int(dom_colors[0][2]),
+        # --- BLOCK 7: Dominant colours ---
+        "dom1_r": int(dom_colours[0][0]),
+        "dom1_g": int(dom_colours[0][1]),
+        "dom1_b": int(dom_colours[0][2]),
         "dom1_saturation": dom1_sat,
 
-        "dom2_r": int(dom_colors[1][0]),
-        "dom2_g": int(dom_colors[1][1]),
-        "dom2_b": int(dom_colors[1][2]),
+        "dom2_r": int(dom_colours[1][0]),
+        "dom2_g": int(dom_colours[1][1]),
+        "dom2_b": int(dom_colours[1][2]),
         "dom2_saturation": dom2_sat,
 
-        "dom3_r": int(dom_colors[2][0]),
-        "dom3_g": int(dom_colors[2][1]),
-        "dom3_b": int(dom_colors[2][2]),
+        "dom3_r": int(dom_colours[2][0]),
+        "dom3_g": int(dom_colours[2][1]),
+        "dom3_b": int(dom_colours[2][2]),
     }
 
 
@@ -309,7 +309,7 @@ def main():
     print(f"Found {len(image_files)} image files.")
 
     rows, failed = [], 0
-    for path in tqdm(image_files, desc="Extracting color features v2"):
+    for path in tqdm(image_files, desc="Extracting colour features v2"):
         row = compute_features(path)
         if row is None:
             failed += 1
