@@ -8,8 +8,8 @@ from scipy.stats import entropy as scipy_entropy
 # =========================================================
 # SETTINGS
 # =========================================================
-DATA_ROOT  = "/scratch/leuven/387/vsc38793/Dataset_0003_PicturePostcards"
-OUTPUT_CSV = "/scratch/leuven/387/vsc38795/postcard_color_project/output/postcard_color_features_v2.csv"
+DATA_ROOT  = "<path_to_postcard_images>"
+OUTPUT_CSV = "01_data/01_processed/postcard_color_features_v2.csv"
 
 VALID_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp")
 RESIZE_TO    = (80, 80)
