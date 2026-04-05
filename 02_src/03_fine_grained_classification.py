@@ -1,15 +1,15 @@
 """
 03_fine_grained_classification.py
 ===================================
-Fine-grained colour classification:
+Fine-grained color classification:
   bw    → bw_dark, bw_light
   sepia → sepia_dark, sepia_light
   color → color_handcolored, color_photo
 
 Step 1: Load postcard_color_labels_final.csv (from script 04)
 Step 2: For each of the 3 classes, run GMM sub-clustering
-Step 3: For the 'color' class, use colour features to separate
-        hand-coloured from real colour photos
+Step 3: For the 'color' class, use color features to separate
+        hand-colored from real color photos
         (CLIP-based extension reserved for future work)
 Step 4: Save final fine-grained labels
 """
@@ -36,7 +36,7 @@ LABELS_CSV  = "01_data/01_processed/postcard_color_labels_final.csv"
 OUTPUT_DIR  = "01_data/01_processed"
 
 # Future extension:
-# combine colour features with CLIP embeddings to better distinguish
+# combine color features with CLIP embeddings to better distinguish
 # photographic and illustrated content.
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -164,14 +164,14 @@ sepia_sub = gmm_subcluster(df_sepia, SEPIA_FEATURES,
 
 
 # =============================================================
-# STEP 3 — Colour sub-clustering: hand-coloured vs real photo
+# STEP 3 — Color sub-clustering: hand-colored vs real photo
 #
-# Current strategy: use colour features only
-#   hand-coloured: hue_unique_count low, s_bimodal_gap high
+# Current strategy: use color features only
+#   hand-colored: hue_unique_count low, s_bimodal_gap high
 #   real photo:    hue_entropy high, hue_unique_count high
 #
 # Future extension:
-#   combine colour features with CLIP embeddings to better
+#   combine color features with CLIP embeddings to better
 #   distinguish photographic and illustrated content.
 # =============================================================
 
@@ -199,7 +199,7 @@ for col in COLOR_FEATURES:
 X_for_gmm = RobustScaler().fit_transform(df_color_clean[COLOR_FEATURES].values)
 df_color_gmm = df_color_clean.copy()
 
-print("\nUsing colour features only for colour sub-clustering.")
+print("\nUsing color features only for color sub-clustering.")
 
 # Run GMM on color group
 print("\n=== Color sub-clustering ===")
