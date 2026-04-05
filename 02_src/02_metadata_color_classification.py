@@ -32,9 +32,9 @@ import seaborn as sns
 # =============================================================
 # SETTINGS
 # =============================================================
-METADATA_CSV = "/scratch/leuven/387/vsc38795/postcard_color_project/20230301-Postcards-csv.csv"
-COLOR_CSV = "/scratch/leuven/387/vsc38795/postcard_color_project/output/postcard_color_features_v2.csv"
-OUTPUT_DIR    = "/scratch/leuven/387/vsc38795/postcard_color_project/output"
+METADATA_CSV = "01_data/00_metadata/20230301-Postcards.csv"
+COLOR_CSV = "01_data/01_processed/postcard_color_features_v2.csv"
+OUTPUT_DIR    = "01_data/01_processed"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # =============================================================
