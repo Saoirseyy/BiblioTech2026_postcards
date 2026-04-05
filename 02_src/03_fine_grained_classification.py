@@ -1,15 +1,15 @@
 """
 03_fine_grained_classification.py
 ===================================
-Fine-grained color classification:
+Fine-grained colour classification:
   bw    → bw_dark, bw_light
   sepia → sepia_dark, sepia_light
-  color → color_handcolored, color_photo
+  colour → colour_handcoloured, colour_photo
 
-Step 1: Load postcard_color_labels_final.csv (from script 04)
+Step 1: Load postcard_colour_labels_final.csv (from script 04)
 Step 2: For each of the 3 classes, run GMM sub-clustering
-Step 3: For the 'color' class, use color features to separate
-        hand-colored from real color photos
+Step 3: For the 'colour' class, use colour features to separate
+        hand-coloured from real colour photos
         (CLIP-based extension reserved for future work)
 Step 4: Save final fine-grained labels
 """
@@ -32,11 +32,11 @@ from sklearn.decomposition import PCA
 # =============================================================
 # SETTINGS
 # =============================================================
-LABELS_CSV  = "01_data/01_processed/postcard_color_labels_final.csv"
+LABELS_CSV  = "01_data/01_processed/postcard_colour_labels_final.csv"
 OUTPUT_DIR  = "01_data/01_processed"
 
 # Future extension:
-# combine color features with CLIP embeddings to better distinguish
+# combine colour features with CLIP embeddings to better distinguish
 # photographic and illustrated content.
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -164,79 +164,79 @@ sepia_sub = gmm_subcluster(df_sepia, SEPIA_FEATURES,
 
 
 # =============================================================
-# STEP 3 — Color sub-clustering: hand-colored vs real photo
+# STEP 3 — colour sub-clustering: hand-coloured vs real photo
 #
-# Current strategy: use color features only
-#   hand-colored: hue_unique_count low, s_bimodal_gap high
+# Current strategy: use colour features only
+#   hand-coloured: hue_unique_count low, s_bimodal_gap high
 #   real photo:    hue_entropy high, hue_unique_count high
 #
 # Future extension:
-#   combine color features with CLIP embeddings to better
+#   combine colour features with CLIP embeddings to better
 #   distinguish photographic and illustrated content.
 # =============================================================
 
-COLOR_FEATURES = [
+colour_FEATURES = [
     "hue_entropy",
     "hue_unique_count",
     "s_bimodal_gap",
-    "colorfulness_v2",
+    "colourfulness_v2",
     "saturated_pixel_ratio",
     "sepia_pixel_ratio",
     "dom1_saturation",
 ]
-COLOR_FEATURES = [f for f in COLOR_FEATURES if f in df.columns]
+COLOUR_FEATURES = [f for f in COLOUR_FEATURES if f in df.columns]
 
-df_color = df[df["predicted_label"] == "color"].copy()
-df_color_clean = df_color.dropna(subset=COLOR_FEATURES).copy()
+df_colour = df[df["predicted_label"] == "colour"].copy()
+df_colour_clean = df_colour.dropna(subset=COLOUR_FEATURES).copy()
 
 # Clip extreme values (1st–99th percentile) to reduce noise from outliers
-for col in COLOR_FEATURES:
-    p1 = df_color_clean[col].quantile(0.01)
-    p99 = df_color_clean[col].quantile(0.99)
-    df_color_clean[col] = df_color_clean[col].clip(lower=p1, upper=p99)
+for col in COLOUR_FEATURES:
+    p1 = df_colour_clean[col].quantile(0.01)
+    p99 = df_colour_clean[col].quantile(0.99)
+    df_colour_clean[col] = df_colour_clean[col].clip(lower=p1, upper=p99)
 
 # Scale features robustly for GMM clustering
-X_for_gmm = RobustScaler().fit_transform(df_color_clean[COLOR_FEATURES].values)
-df_color_gmm = df_color_clean.copy()
+X_for_gmm = RobustScaler().fit_transform(df_colour_clean[COLOUR_FEATURES].values)
+df_colour_gmm = df_colour_clean.copy()
 
-print("\nUsing color features only for color sub-clustering.")
+print("\nUsing colour features only for colour sub-clustering.")
 
-# Run GMM on color group
-print("\n=== Color sub-clustering ===")
-gmm_color = GaussianMixture(
+# Run GMM on colour group
+print("\n=== colour sub-clustering ===")
+gmm_colour = GaussianMixture(
     n_components=2,
     covariance_type="full",
     n_init=5,
     max_iter=300,
     random_state=42,
 )
-color_clusters = gmm_color.fit_predict(X_for_gmm)
-df_color_gmm["_cluster"] = color_clusters
+colour_clusters = gmm_colour.fit_predict(X_for_gmm)
+df_colour_gmm["_cluster"] = colour_clusters
 
 # Assign labels by hue_entropy:
-# higher hue_entropy → more diverse hues → real color photo
-means_entropy = df_color_gmm.groupby("_cluster")["hue_entropy"].mean()
+# higher hue_entropy → more diverse hues → real colour photo
+means_entropy = df_colour_gmm.groupby("_cluster")["hue_entropy"].mean()
 real_cluster  = means_entropy.idxmax()
 hand_cluster  = means_entropy.idxmin()
 
-color_label_map = {
-    real_cluster: "color_photo",
-    hand_cluster: "color_handcolored",
+colour_label_map = {
+    real_cluster: "colour_photo",
+    hand_cluster: "colour_handcoloured",
 }
-df_color_gmm["sub_label"] = df_color_gmm["_cluster"].map(color_label_map)
+df_colour_gmm["sub_label"] = df_colour_gmm["_cluster"].map(colour_label_map)
 
-print("Color sub-cluster counts:")
-print(df_color_gmm["sub_label"].value_counts())
+print("colour sub-cluster counts:")
+print(df_colour_gmm["sub_label"].value_counts())
 print(f"\nMean hue_entropy per cluster:")
-print(df_color_gmm.groupby("sub_label")["hue_entropy"].mean().round(3))
+print(df_colour_gmm.groupby("sub_label")["hue_entropy"].mean().round(3))
 
-color_sub = df_color_gmm[["image_path", "sub_label"]]
+colour_sub = df_colour_gmm[["image_path", "sub_label"]]
 
 
 # =============================================================
 # STEP 4 — Merge all sub-labels back
 # =============================================================
-sub_label_df = pd.concat([bw_sub, sepia_sub, color_sub], ignore_index=True)
+sub_label_df = pd.concat([bw_sub, sepia_sub, colour_sub], ignore_index=True)
 
 df = df.merge(sub_label_df, on="image_path", how="left")
 
@@ -250,7 +250,7 @@ print(df["fine_label"].value_counts())
 # =============================================================
 # STEP 5 — PCA visualisation
 # =============================================================
-FEAT_VIS = [f for f in COLOR_FEATURES + BW_FEATURES + SEPIA_FEATURES
+FEAT_VIS = [f for f in COLOUR_FEATURES + BW_FEATURES + SEPIA_FEATURES
             if f in df.columns]
 FEAT_VIS = list(dict.fromkeys(FEAT_VIS))  # deduplicate
 
@@ -265,22 +265,22 @@ pca   = PCA(n_components=2, random_state=42)
 X_2d  = pca.fit_transform(X_vis)
 ev    = pca.explained_variance_ratio_
 
-color_palette = {
+colour_palette = {
     "bw_dark":           "#333333",
     "bw_light":          "#aaaaaa",
     "sepia_dark":        "#7B3F00",
     "sepia_light":       "#D2A679",
-    "color_photo":       "#1f77b4",
-    "color_handcolored": "#ff7f0e",
+    "colour_photo":       "#1f77b4",
+    "colour_handcoloured": "#ff7f0e",
 }
 
 plt.figure(figsize=(10, 7))
-for lbl, col in color_palette.items():
+for lbl, col in colour_palette.items():
     mask = df_vis["fine_label"] == lbl
     if mask.sum() == 0:
         continue
     plt.scatter(X_2d[mask, 0], X_2d[mask, 1],
-                s=4, alpha=0.4, color=col, label=f"{lbl} (n={mask.sum()})")
+                s=4, alpha=0.4, colour=col, label=f"{lbl} (n={mask.sum()})")
 plt.legend(fontsize=8, markerscale=2)
 plt.title(f"PCA — fine-grained labels  (PC1={ev[0]:.1%}, PC2={ev[1]:.1%})")
 plt.xlabel("PC1"); plt.ylabel("PC2")
