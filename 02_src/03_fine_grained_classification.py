@@ -8,8 +8,9 @@ Fine-grained colour classification:
 
 Step 1: Load postcard_color_labels_final.csv (from script 04)
 Step 2: For each of the 3 classes, run GMM sub-clustering
-Step 3: For the 'color' class, use CLIP embeddings to separate
-        hand-colored from real color photos (if available)
+Step 3: For the 'color' class, use colour features to separate
+        hand-coloured from real colour photos
+        (CLIP-based extension reserved for future work)
 Step 4: Save final fine-grained labels
 """
 
@@ -31,12 +32,12 @@ from sklearn.decomposition import PCA
 # =============================================================
 # SETTINGS
 # =============================================================
-LABELS_CSV  = "/scratch/leuven/387/vsc38795/postcard_color_project/output/postcard_color_labels_final.csv"
-OUTPUT_DIR  = "/scratch/leuven/387/vsc38795/postcard_color_project/output"
+LABELS_CSV  = "01_data/01_processed/postcard_color_labels_final.csv"
+OUTPUT_DIR  = "01_data/01_processed"
 
-# CLIP files — set to None if not available yet
-CLIP_EMB_PATH = "/scratch/leuven/387/vsc38795/postcard_color_project/clip_emb_matrix.pt"
-IMG_IDS_PATH  = "/scratch/leuven/387/vsc38795/postcard_color_project/img_ids.txt"
+# Future extension:
+# combine colour features with CLIP embeddings to better distinguish
+# photographic and illustrated content.
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -96,12 +97,12 @@ def gmm_subcluster(df_subset, features, n_components=2,
     """
     df_sub = df_subset.dropna(subset=features).copy()
 
-    # Clip outliers
+    # Clip extreme values (1st–99th percentile) to reduce noise from outliers
     for col in features:
         p1  = df_sub[col].quantile(0.01)
         p99 = df_sub[col].quantile(0.99)
         df_sub[col] = df_sub[col].clip(lower=p1, upper=p99)
-
+    # Scale features robustly (less sensitive to outliers)
     X = RobustScaler().fit_transform(df_sub[features].values)
 
     gmm = GaussianMixture(
@@ -163,13 +164,15 @@ sepia_sub = gmm_subcluster(df_sepia, SEPIA_FEATURES,
 
 
 # =============================================================
-# STEP 3 — Color sub-clustering: hand-colored vs real photo
+# STEP 3 — Colour sub-clustering: hand-coloured vs real photo
 #
-# Strategy A (always runs): use colour features
-#   hand-colored: hue_unique_count low, s_bimodal_gap high
-#   real photo:   hue_entropy high, hue_unique_count high
+# Current strategy: use colour features only
+#   hand-coloured: hue_unique_count low, s_bimodal_gap high
+#   real photo:    hue_entropy high, hue_unique_count high
 #
-# Strategy B (runs if CLIP available): combine with CLIP
+# Future extension:
+#   combine colour features with CLIP embeddings to better
+#   distinguish photographic and illustrated content.
 # =============================================================
 
 COLOR_FEATURES = [
@@ -186,55 +189,17 @@ COLOR_FEATURES = [f for f in COLOR_FEATURES if f in df.columns]
 df_color = df[df["predicted_label"] == "color"].copy()
 df_color_clean = df_color.dropna(subset=COLOR_FEATURES).copy()
 
+# Clip extreme values (1st–99th percentile) to reduce noise from outliers
 for col in COLOR_FEATURES:
-    p1  = df_color_clean[col].quantile(0.01)
+    p1 = df_color_clean[col].quantile(0.01)
     p99 = df_color_clean[col].quantile(0.99)
     df_color_clean[col] = df_color_clean[col].clip(lower=p1, upper=p99)
 
-X_color = RobustScaler().fit_transform(df_color_clean[COLOR_FEATURES].values)
+# Scale features robustly for GMM clustering
+X_for_gmm = RobustScaler().fit_transform(df_color_clean[COLOR_FEATURES].values)
+df_color_gmm = df_color_clean.copy()
 
-# --- Try to load CLIP embeddings ---
-clip_available = False
-if os.path.exists(CLIP_EMB_PATH) and os.path.exists(IMG_IDS_PATH):
-    try:
-        import torch
-        print("\nLoading CLIP embeddings...")
-        emb_matrix = torch.load(CLIP_EMB_PATH, map_location="cpu").numpy()
-        img_names  = open(IMG_IDS_PATH).read().splitlines()
-        clip_df    = pd.DataFrame({
-            "image_path_clip": img_names,
-            "clip_idx": range(len(img_names))
-        })
-        clip_df["basename"]           = clip_df["image_path_clip"].apply(os.path.basename)
-        df_color_clean["basename"]    = df_color_clean["image_path"].apply(os.path.basename)
-        merged = df_color_clean.merge(clip_df, on="basename", how="inner")
-
-        if len(merged) > 100:
-            clip_indices = merged["clip_idx"].values
-            X_clip_full  = emb_matrix[clip_indices]
-            pca_clip     = PCA(n_components=30, random_state=42)
-            X_clip_30    = pca_clip.fit_transform(X_clip_full)
-            X_clip_30    = RobustScaler().fit_transform(X_clip_30)
-
-            # Re-align X_color to merged rows
-            merged_idx  = merged.index
-            X_color_sub = RobustScaler().fit_transform(
-                merged[COLOR_FEATURES].values
-            )
-            X_combined  = np.hstack([X_color_sub, X_clip_30])
-            df_color_gmm = merged.copy()
-            X_for_gmm    = X_combined
-            clip_available = True
-            print(f"CLIP available, using combined features ({X_combined.shape[1]} dims)")
-        else:
-            print("Too few CLIP matches, falling back to colour features only.")
-    except Exception as e:
-        print(f"CLIP load failed ({e}), using colour features only.")
-
-if not clip_available:
-    df_color_gmm = df_color_clean.copy()
-    X_for_gmm    = X_color
-    print("\nUsing colour features only for color sub-clustering.")
+print("\nUsing colour features only for colour sub-clustering.")
 
 # Run GMM on color group
 print("\n=== Color sub-clustering ===")
