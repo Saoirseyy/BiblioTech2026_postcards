@@ -1,10 +1,7 @@
 # Postcard Colour Classification
 
-Colour analysis pipeline developed for the BiblioTech Hackathon 2026 (Team 4 — Inked and Stamped).
-
-The 2026 edition of the KU Leuven BiblioTech Hackathon invited participants to work with two travel-related datasets from KU Leuven Libraries digitized collections, including a dataset of [Belgian historical postcards](https://kuleuven.limo.libis.be/discovery/collectionDiscovery?vid=32KUL_KUL:KULeuven&collectionId=81531489730001488&lang=en).
-
-This repository focuses on the colour analysis pipeline I developed for 35,930 postcard images, with the goal of producing a more consistent and reusable colour labelling system.
+During the 2026 KU Leuven BiblioTech Hackathon, our team Inked and Stamped worked on the [Belgian historical postcards](https://kuleuven.limo.libis.be/discovery/collectionDiscovery?vid=32KUL_KUL:KULeuven&collectionId=81531489730001488&lang=en) dataset from KU Leuven Libraries digitized collections.
+This repository presents the colour analysis pipeline I developed for 35,930 postcard images, with the goal of producing a more consistent and reusable colour labelling system.
 
 
 ## Overview
@@ -39,8 +36,6 @@ Metadata is used as guidance rather than ground truth, clustering is used to dis
 | `color_handcolored` | Hand-coloured image |  
 | `color_photo` | Real colour photograph |
 
-![Final categories overview](04_result/category.png)
-
 
 ## Pipeline
 
@@ -58,13 +53,14 @@ Extracts 50 colour features per image using OpenCV and NumPy, including:
 ### Step 2 — Metadata-Guided Classification  
 `02_src/02_metadata_color_classification.py`
 
-Trains a Random Forest classifier on postcards with existing metadata labels and predicts labels for unlabelled data.
-
-Outputs three broad categories:
+A Random Forest classifier is trained using postcards with existing metadata colour labels.  
+Instead of treating metadata as fully reliable ground truth, only the three most consistent high-level categories are used:  
 
 - black-and-white  
 - sepia  
 - colour  
+
+The model learns to map visual features to these broad categories and is then applied to all images, ensuring that every postcard is consistently assigned to one of the three groups.
 
 
 ### Step 3 — Fine-Grained Classification  
@@ -99,9 +95,36 @@ Post-processing rules:
 
 ## Key Findings
 
-- Colour photographs increase significantly from the 1960s onwards  
-- Monotone printing styles (blue, green, purple, red) were present but inconsistently labelled in the original metadata  
-- This pipeline provides a more standardised and consistent colour labelling system, improving the usability of the collection for analysis and exploration  
+- This pipeline provides a more standardised and consistent colour labelling system by combining visual features with metadata-guided modelling.  
+  In particular, it consolidates previously inconsistent labels into a unified taxonomy, enabling more reliable comparison and analysis across the collection.
+
+- A clear temporal shift is observed across decades.  
+  Earlier postcards are dominated by black-and-white and sepia imagery, with sepia peaking around the 1930s.  
+  From the 1960s onwards, colour photographs increase sharply and become the dominant format by the 1970s and 1980s.
+
+- Colour usage varies across cities.  
+  Most cities are dominated by black-and-white postcards, with this pattern being particularly strong in Liège and Mechelen.  
+  In contrast, Namur stands out with a high proportion of sepia images.  
+  Brugge shows a more balanced distribution, with black-and-white, sepia, and colour postcards (including colour photographs and hand-coloured images) appearing in relatively similar proportions compared to other cities.  
+  Interestingly, Oostende is notable for having a notably higher proportion of hand-coloured postcards.  
+  These differences likely reflect variations in time period, local publishing practices, and the intended use of postcards across different locations.
+
+- Distinct colour preferences can be observed across publishers.  
+  Several publishers (e.g. V.E.D, Bertels, Vanderauwera, van den Heuvel) predominantly produce black-and-white postcards, while others such as Thill and Nels show a higher proportion of sepia prints.  
+  In addition, some publishers exhibit strong associations with specific colour styles, for example Marcovici with monotone blue prints and VO-DW with monotone red prints.  
+  This suggests that colour usage is not only influenced by time period but also shaped by publisher-specific stylistic or production choices.
+
+  ### Final Colour Categories
+![Final categories](04_result/category.png)
+
+### Colour Distribution by Decade
+![Decade distribution](04_result/output1.png)
+
+### Colour Distribution by City
+![City distribution](04_result/output2.png)
+
+### Colour Distribution by Publisher
+![Publisher distribution](04_result/output3.png)
 
 
 ## Limitations
