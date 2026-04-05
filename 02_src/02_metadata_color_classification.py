@@ -1,16 +1,16 @@
 """
 02_metadata_color_classification.py
 =====================================
-Use metadata colour labels as ground truth to:
+Use metadata color labels as ground truth to:
   1. Directly label images that have metadata
-  2. Train a Random Forest classifier on colour features
+  2. Train a Random Forest classifier on color features
   3. Predict labels for images without metadata
   4. Optionally combine with CLIP embeddings if available
  
-Colour categories (consolidated):
+Color categories (consolidated):
   bw    — Black-and-white, Grey
   sepia — Sepia, Brown
-  color — Colour only
+  color — Color only
   (Blue, Green, Red, Purple, Pink → NaN, predicted by classifier)
 """
 import os
@@ -76,26 +76,26 @@ print(f"Metadata shape: {meta.shape}")
 # Extract IE id from Resolver URL
 meta["IE_id"] = meta["Resolver URL 856$u"].str.extract(r"/(IE\d+)/")
  
-# Consolidate colour labels into 3 categories
-COLOUR_MAP = {
+# Consolidate color labels into 3 categories
+COLOR_MAP = {
     "Black-and-white": "bw",
     "Grey":            "bw",
     "Sepia":           "sepia",
     "Brown":           "sepia",
-    "Colour":          "color",
+    "Color":          "color",
     
 }
-meta["color_label"] = meta["Colour 340$o_standardized"].map(COLOUR_MAP)
+meta["color_label"] = meta["Color 340$o_standardized"].map(COLOR_MAP)
  
-print("\nConsolidated colour distribution:")
+print("\nConsolidated color distribution:")
 print(meta["color_label"].value_counts())
 print(f"Unmapped: {meta['color_label'].isna().sum()}")
  
  
 # =============================================================
-# STEP 2 — Load colour features, keep front side only
+# STEP 2 — Load color features, keep front side only
 # =============================================================
-print("\nLoading colour features...")
+print("\nLoading color features...")
 df_color = pd.read_csv(COLOR_CSV)
 df_color["side_flag"] = df_color["file_name"].str.extract(
     r"_(R|V)(?=[._])", expand=False
@@ -109,10 +109,10 @@ print(f"IE id extracted: {df_front['IE_id'].notna().sum()} / {len(df_front)}")
  
  
 # =============================================================
-# STEP 3 — Join metadata colour labels onto image features
+# STEP 3 — Join metadata color labels onto image features
 # =============================================================
 meta_slim = meta[["IE_id", "color_label",
-                   "Colour 340$o_standardized",
+                   "Color 340$o_standardized",
                    "Date 264$c_estimate",
                    "Date 264$c_estimateDecade"]].copy()
  
@@ -129,7 +129,7 @@ print(df["color_label"].value_counts())
 # STEP 4 — Prepare features
 # =============================================================
 FEATURES = [
-    # Core colour signals
+    # Core color signals
     "saturated_pixel_ratio",
     "chromatic_pixel_ratio",
     "colorfulness_v2",
@@ -143,7 +143,7 @@ FEATURES = [
     "sepia_pixel_ratio",
     "yb_mean",
     "rg_mean",
-    # Dominant colour saturation
+    # Dominant color saturation
     "dom1_saturation",
     "dom2_saturation",
 ]
@@ -256,7 +256,7 @@ print(df_clean.groupby(["label_source", "predicted_label"]).size())
  
  
 # =============================================================
-# STEP 8 — Visualise: PCA coloured by label
+# STEP 8 — Visualise: PCA colored by label
 # =============================================================
 from sklearn.decomposition import PCA
  
@@ -286,7 +286,7 @@ for ax, source in zip(axes, ["metadata", "all"]):
     ax.set_xlabel(f"PC1 ({ev[0]:.1%})")
     ax.set_ylabel(f"PC2 ({ev[1]:.1%})")
  
-plt.suptitle("PCA coloured by colour label", fontsize=12)
+plt.suptitle("PCA colored by color label", fontsize=12)
 plt.tight_layout()
 plt.show()
  
@@ -317,7 +317,7 @@ show_label_samples(
 out_cols = (
     ["image_id", "file_name", "image_path", "IE_id",
      "color_label", "predicted_label", "label_source", "label_confidence",
-     "Colour 340$o_standardized", "Date 264$c_estimate", "Date 264$c_estimateDecade"]
+     "Color 340$o_standardized", "Date 264$c_estimate", "Date 264$c_estimateDecade"]
     + FEATURES
 )
 out_cols = [c for c in out_cols if c in df_clean.columns]
